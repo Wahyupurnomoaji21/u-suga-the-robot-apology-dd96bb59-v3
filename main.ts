@@ -13,44 +13,48 @@ const LESSON =
 
 const LINES = [APOLOGY, LESSON];
 
-function countSentences(line) {
-  // A sentence ends with a full stop followed by end-of-line (or a space
-  // plus a capital, which never occurs inside these single sentences).
-  const trimmed = line.trim();
-  const stops = trimmed.match(/\.(?=\s|$)/g) ?? [];
-  return stops.length;
-}
-
 function fail(message) {
   throw new Error(`entry gate failed: ${message}`);
 }
 
-function checkGate(text) {
+function countFullStops(line) {
+  // Count every '.' in the line, not just sentence-final ones: the gate
+  // demands exactly one sentence per line, so a line may hold exactly
+  // one full stop in total. Any abbreviation, decimal or extra sentence
+  // would add a second '.' and fail the gate.
+  return [...line].filter((ch) => ch === ".").length;
+}
+
+function validateEntry(lines, text) {
+  // Single entry point for every gate check; called before any file write.
   if (text.length < 1 || text.length > 400) {
     fail(`entry is ${text.length} characters, outside the 1-400 gate`);
   }
   if (text.trim().length === 0) {
     fail("entry is only whitespace");
   }
-  const lines = text.replace(/\n$/, "").split("\n");
   if (lines.length !== 2) {
     fail(`entry must be exactly 2 lines, got ${lines.length}`);
   }
   for (const [index, line] of lines.entries()) {
-    if (line.trim().length === 0) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
       fail(`line ${index + 1} is empty`);
     }
-    if (countSentences(line) !== 1) {
-      fail(`line ${index + 1} must be exactly one sentence`);
-    }
-    if (!line.trim().endsWith(".")) {
+    if (!trimmed.endsWith(".")) {
       fail(`line ${index + 1} must end with a full stop`);
+    }
+    const stops = countFullStops(trimmed);
+    if (stops !== 1) {
+      fail(
+        `line ${index + 1} must contain exactly one full stop, found ${stops}`,
+      );
     }
   }
 }
 
 const TEXT = `${LINES.join("\n")}\n`;
-checkGate(TEXT);
+validateEntry(LINES, TEXT);
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR
